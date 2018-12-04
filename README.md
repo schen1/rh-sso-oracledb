@@ -25,7 +25,7 @@ $ oc process sso72-oracle \
 -p ORACLE_SERVICE_HOST=service-db.ocp-sso.svc \
 -p ORACLE_SERVICE_HOST_2=service-db2.ocp-sso.svc  \
 -p HOSTNAME_HTTPS=sso.example.com \
--p HOSTNAME_HTTP=sso.example.com \
+-p HOSTNAME_HTTP=nonsecure-sso.example.com \
 -p SSO_TRUSTSTORE_DIR=/etc/sso-secret-volume \
 -p SSO_TRUSTSTORE=truststore.jks \
 -p SSO_TRUSTSTORE_PASSWORD=XXXXX \
