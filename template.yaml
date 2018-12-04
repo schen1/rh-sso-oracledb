@@ -106,7 +106,7 @@ objects:
       tls:
         termination: edge
       to:
-        name: 'secure-${APPLICATION_NAME}'
+        name: '${APPLICATION_NAME}'
   - apiVersion: v1
     kind: DeploymentConfig
     metadata:
