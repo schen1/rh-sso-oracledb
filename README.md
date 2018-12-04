@@ -1,5 +1,5 @@
 # rh-sso-oracledb
-Deploy RH SSO with a template for accessing external Oracle database
+Deploy RH SSO with a template backed by external Oracle database
 
 # Prerequisites
 Have the external Openshift service configured to the Oracle DB.
