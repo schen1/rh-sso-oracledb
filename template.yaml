@@ -1,0 +1,453 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+labels:
+  template: sso72-oracle
+  xpaas: 1.4.15
+message: >-
+  A new RH-SSO service (using Oracle DB) has been created in your
+  project. The admin username/password for accessing the master realm via the
+  RH-SSO console is ${SSO_ADMIN_USERNAME}/${SSO_ADMIN_PASSWORD}. The
+  username/password for accessing the Oracle database "${ORACLE_DATABASE}" is
+  ${ORACLE_USERNAME}/${ORACLE_PASSWORD}. Please be sure to create the following secrets:
+  "${HTTPS_SECRET}" containing the ${HTTPS_KEYSTORE} file used for serving
+  secure content; "${JGROUPS_ENCRYPT_SECRET}" containing the
+  ${JGROUPS_ENCRYPT_KEYSTORE} file used for securing JGroups communications;
+  "${SSO_TRUSTSTORE_SECRET}" containing the ${SSO_TRUSTSTORE} file used for
+  securing RH-SSO requests.
+metadata:
+  annotations:
+    description: >-
+      An example RH-SSO 7 application with an external Oracle database. For more
+      information about using this template, see
+      https://github.com/schen1/rh-sso-oracledb.
+    iconClass: icon-sso
+    openshift.io/display-name: Red Hat Single Sign-On 7.2 + Oracle DB (External)
+    openshift.io/provider-display-name: 'Red Hat, Inc.'
+    tags: 'sso,keycloak,jboss'
+    template.openshift.io/documentation-url: 'https://access.redhat.com/documentation/en/red-hat-single-sign-on/'
+    template.openshift.io/long-description: >-
+      This template defines resources needed to develop Red Hat Single Sign-On
+      7.2 server based deployment, deployment configuration for Oracle DB, and securing RH-SSO communication using edge TLS.
+    template.openshift.io/support-url: 'https://access.redhat.com'
+    version: 1.4.15
+  name: sso72-oracle
+  namespace: ocp-sso
+objects:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      annotations:
+        description: The web server's http port.
+        service.alpha.openshift.io/dependencies: '[{"name": "${APPLICATION_NAME}-oracle", "kind": "Service"}]'
+      labels:
+        application: '${APPLICATION_NAME}'
+      name: '${APPLICATION_NAME}'
+    spec:
+      ports:
+        - port: 8080
+          targetPort: 8080
+      selector:
+        deploymentConfig: '${APPLICATION_NAME}'
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      annotations:
+        description: The web server's https port.
+        service.alpha.openshift.io/dependencies: '[{"name": "${APPLICATION_NAME}-oracle", "kind": "Service"}]'
+      labels:
+        application: '${APPLICATION_NAME}'
+      name: 'secure-${APPLICATION_NAME}'
+    spec:
+      ports:
+        - port: 8443
+          targetPort: 8443
+      selector:
+        deploymentConfig: '${APPLICATION_NAME}'
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      annotations:
+        description: The JGroups ping port for clustering.
+        service.alpha.kubernetes.io/tolerate-unready-endpoints: 'true'
+      labels:
+        application: '${APPLICATION_NAME}'
+      name: '${APPLICATION_NAME}-ping'
+    spec:
+      clusterIP: None
+      ports:
+        - name: ping
+          port: 8888
+      selector:
+        deploymentConfig: '${APPLICATION_NAME}'
+  - apiVersion: v1
+    id: '${APPLICATION_NAME}-http'
+    kind: Route
+    metadata:
+      annotations:
+        description: Route for application's http service.
+      labels:
+        application: '${APPLICATION_NAME}'
+      name: '${APPLICATION_NAME}'
+    spec:
+      host: '${HOSTNAME_HTTP}'
+      to:
+        name: '${APPLICATION_NAME}'
+  - apiVersion: v1
+    id: '${APPLICATION_NAME}-https'
+    kind: Route
+    metadata:
+      annotations:
+        description: Route for application's https service.
+      labels:
+        application: '${APPLICATION_NAME}'
+      name: 'secure-${APPLICATION_NAME}'
+    spec:
+      host: '${HOSTNAME_HTTPS}'
+      tls:
+        termination: edge
+      to:
+        name: 'secure-${APPLICATION_NAME}'
+  - apiVersion: v1
+    kind: DeploymentConfig
+    metadata:
+      labels:
+        application: '${APPLICATION_NAME}'
+      name: '${APPLICATION_NAME}'
+    spec:
+      replicas: 1
+      selector:
+        deploymentConfig: '${APPLICATION_NAME}'
+      strategy:
+        type: Recreate
+      template:
+        metadata:
+          labels:
+            application: '${APPLICATION_NAME}'
+            deploymentConfig: '${APPLICATION_NAME}'
+          name: '${APPLICATION_NAME}'
+        spec:
+          containers:
+            - command:
+              - sh
+              - '-c'
+              - >-
+                /opt/eap/bin/jboss-cli.sh --file=/extensions/scripts/actions.cli
+                && /opt/eap/bin/openshift-launch.sh;
+              env:
+                - name: DB_SERVICE_PREFIX_MAPPING
+                  value: ''
+                - name: DB_JNDI
+                  value: '${DB_JNDI}'
+                - name: TX_DATABASE_PREFIX_MAPPING
+                  value: ''
+                - name: DB_MIN_POOL_SIZE
+                  value: '${DB_MIN_POOL_SIZE}'
+                - name: DB_MAX_POOL_SIZE
+                  value: '${DB_MAX_POOL_SIZE}'
+                - name: DB_TX_ISOLATION
+                  value: '${DB_TX_ISOLATION}'
+                - name: JGROUPS_PING_PROTOCOL
+                  value: openshift.DNS_PING
+                - name: OPENSHIFT_DNS_PING_SERVICE_NAME
+                  value: '${APPLICATION_NAME}-ping'
+                - name: OPENSHIFT_DNS_PING_SERVICE_PORT
+                  value: '8888'
+                - name: HTTPS_KEYSTORE_DIR
+                  value: /etc/eap-secret-volume
+                - name: HTTPS_KEYSTORE
+                  value: '${HTTPS_KEYSTORE}'
+                - name: HTTPS_KEYSTORE_TYPE
+                  value: '${HTTPS_KEYSTORE_TYPE}'
+                - name: HTTPS_NAME
+                  value: '${HTTPS_NAME}'
+                - name: HTTPS_PASSWORD
+                  value: '${HTTPS_PASSWORD}'
+                - name: JGROUPS_ENCRYPT_SECRET
+                  value: '${JGROUPS_ENCRYPT_SECRET}'
+                - name: JGROUPS_ENCRYPT_KEYSTORE_DIR
+                  value: /etc/jgroups-encrypt-secret-volume
+                - name: JGROUPS_ENCRYPT_KEYSTORE
+                  value: '${JGROUPS_ENCRYPT_KEYSTORE}'
+                - name: JGROUPS_ENCRYPT_NAME
+                  value: '${JGROUPS_ENCRYPT_NAME}'
+                - name: JGROUPS_ENCRYPT_PASSWORD
+                  value: '${JGROUPS_ENCRYPT_PASSWORD}'
+                - name: JGROUPS_CLUSTER_PASSWORD
+                  value: '${JGROUPS_CLUSTER_PASSWORD}'
+                - name: SSO_ADMIN_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      key: username
+                      name: sso-admin-secret
+                - name: SSO_ADMIN_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      key: password
+                      name: sso-admin-secret
+                - name: SSO_REALM
+                  value: '${SSO_REALM}'
+                - name: SSO_SERVICE_USERNAME
+                  value: '${SSO_SERVICE_USERNAME}'
+                - name: SSO_SERVICE_PASSWORD
+                  value: '${SSO_SERVICE_PASSWORD}'
+                - name: SSO_TRUSTSTORE
+                  value: '${SSO_TRUSTSTORE}'
+                - name: SSO_TRUSTSTORE_DIR
+                  value: /etc/sso-secret-volume
+                - name: SSO_TRUSTSTORE_PASSWORD
+                  value: '${SSO_TRUSTSTORE_PASSWORD}'
+                - name: ORACLE_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      key: username
+                      name: sso-oracle-secret
+                - name: ORACLE_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      key: password
+                      name: sso-oracle-secret
+                - name: ORACLE_DATABASE
+                  value: '${ORACLE_DATABASE}'
+                - name: ORACLE_SERVICE_HOST
+                  value: '${ORACLE_SERVICE_HOST}'
+                - name: ORACLE_SERVICE_PORT
+                  value: '${ORACLE_SERVICE_PORT}'
+                - name: ORACLE_SERVICE_HOST_2
+                  value: '${ORACLE_SERVICE_HOST_2}'
+                - name: ORACLE_SERVICE_PORT_2
+                  value: '${ORACLE_SERVICE_PORT_2}'
+                - name: ORACLE_SERVICE_NAME
+                  value: '${ORACLE_SERVICE_NAME}'
+              image: '${IMAGE}'
+              imagePullPolicy: Always
+              livenessProbe:
+                exec:
+                  command:
+                    - /bin/bash
+                    - '-c'
+                    - /opt/eap/bin/livenessProbe.sh
+                initialDelaySeconds: 60
+              name: '${APPLICATION_NAME}'
+              ports:
+                - containerPort: 8778
+                  name: jolokia
+                  protocol: TCP
+                - containerPort: 8080
+                  name: http
+                  protocol: TCP
+                - containerPort: 8443
+                  name: https
+                  protocol: TCP
+                - containerPort: 8888
+                  name: ping
+                  protocol: TCP
+              readinessProbe:
+                exec:
+                  command:
+                    - /bin/bash
+                    - '-c'
+                    - /opt/eap/bin/readinessProbe.sh
+              resources:
+                limits:
+                  memory: '${MEMORY_LIMIT}'
+              volumeMounts:
+                - mountPath: /etc/eap-secret-volume
+                  name: eap-keystore-volume
+                  readOnly: true
+                - mountPath: /etc/jgroups-encrypt-secret-volume
+                  name: eap-jgroups-keystore-volume
+                  readOnly: true
+                - mountPath: /etc/sso-secret-volume
+                  name: sso-truststore-volume
+                  readOnly: true
+                - mountPath: /extensions/scripts/
+                  name: sso-init-script-configmap
+                  readOnly: true
+          terminationGracePeriodSeconds: 75
+          volumes:
+            - name: eap-keystore-volume
+              secret:
+                secretName: '${HTTPS_SECRET}'
+            - name: eap-jgroups-keystore-volume
+              secret:
+                secretName: '${JGROUPS_ENCRYPT_SECRET}'
+            - name: sso-truststore-volume
+              secret:
+                secretName: '${SSO_TRUSTSTORE_SECRET}'
+            - configMap:
+                defaultMode: 420
+                name: sso-init-script
+              name: sso-init-script-configmap
+      triggers:
+        - type: ConfigChange
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      annotations:
+        template.openshift.io/base64-expose-password: '{.data[''password'']}'
+      name: '${APPLICATION_NAME}-admin-secret'
+    stringData:
+      password: '${SSO_ADMIN_PASSWORD}'
+      username: '${SSO_ADMIN_USERNAME}'
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      annotations:
+        template.openshift.io/base64-expose-password: '{.data[''password'']}'
+      name: '${APPLICATION_NAME}-oracle-secret'
+    stringData:
+      password: '${ORACLE_PASSWORD}'
+      username: '${ORACLE_USERNAME}'
+  - apiVersion: v1
+    data:
+      actions.cli: "#!/bin/bash\r\n\r\n## admin cli commands to edit the configuration\r\nembed-server --std-out=echo  --server-config=standalone-openshift.xml\r\nbatch\r\nmodule add --name=com.oracle --resources=/extensions/oracle-driver-ojdbc-12.1.0.2.jar --dependencies=javax.api,javax.resource.api\r\n/subsystem=datasources/jdbc-driver=oracle:add(driver-name=oracle,driver-module-name=com.oracle,driver-xa-datasource-class-name=oracle.jdbc.xa.client.OracleXADataSource)\r\n/subsystem=datasources/data-source=KeycloakDS:remove()\r\n/subsystem=datasources/data-source=KeycloakDS:add(jndi-name=java:jboss/datasources/KeycloakDS,enabled=true,use-java-context=true,connection-url=\"jdbc\\:oracle\\:thin\\:@(DESCRIPTION\\=(LOAD_BALANCE\\=on)(ADDRESS\\=(PROTOCOL\\=TCP)(HOST\\=${env.ORACLE_SERVICE_HOST})(PORT\\=${env.ORACLE_SERVICE_PORT}))(ADDRESS\\=(PROTOCOL\\=TCP)(HOST\\=${env.ORACLE_SERVICE_HOST_2})(PORT\\=${env.ORACLE_SERVICE_PORT_2}))(CONNECT_DATA\\=(SERVICE_NAME\\=${env.ORACLE_SERVICE_NAME})))\",driver-name=oracle,user-name=${env.ORACLE_USERNAME},password=${env.ORACLE_PASSWORD})\r\n/subsystem=keycloak-server/spi=truststore:add()\r\n/subsystem=keycloak-server/spi=truststore/provider=file:add(enabled=true)\r\n/subsystem=keycloak-server/spi=truststore/provider=file/:map-put(name=properties,key=file, value=\"${env.SSO_TRUSTSTORE_DIR}/${env.SSO_TRUSTSTORE}\")\r\n/subsystem=keycloak-server/spi=truststore/provider=file/:map-put(name=properties,key=password, value=\"${env.SSO_TRUSTSTORE_PASSWORD}\")\r\n/subsystem=keycloak-server/spi=truststore/provider=file/:map-put(name=properties,key=hostname-verification-policy, value=\"WILDCARD\")\r\n/subsystem=keycloak-server/spi=truststore/provider=file/:map-put(name=properties,key=disabled, value=\"false\")\r\nrun-batch\r\nquit\r\n"
+    kind: ConfigMap
+    metadata:
+      name: sso-init-script
+      namespace: ocp-sso
+parameters:
+  - description: The name for the application.
+    displayName: Application Name
+    name: APPLICATION_NAME
+    required: true
+    value: sso
+  - description: The image
+    displayName: The Image (e.g.: quay.io/abc/xyz:latest)
+    name: IMAGE
+    required: true
+  - description: >-
+      Custom hostname for http service route. Leave blank for default hostname,
+      e.g.: <application-name>.<project>.<default-domain-suffix>
+    displayName: Custom http Route Hostname
+    name: HOSTNAME_HTTP
+  - description: >-
+      Custom hostname for https service route. Leave blank for default hostname,
+      e.g.: <application-name>.<project>.<default-domain-suffix>
+    displayName: Custom https Route Hostname
+    name: HOSTNAME_HTTPS
+  - description: >-
+      Database JNDI name used by application to resolve the datasource, e.g.
+      java:/jboss/datasources/postgresql
+    displayName: Database JNDI Name
+    name: DB_JNDI
+    value: 'java:jboss/datasources/KeycloakDS'
+  - description: Database name
+    displayName: Database Name
+    name: ORACLE_DATABASE
+    required: true
+  - description: Database username
+    displayName: Database Username
+    name: ORACLE_USERNAME
+    required: true
+  - description: Database password
+    displayName: Database Password
+    name: ORACLE_PASSWORD
+    required: true
+  - description: Database service host 1
+    displayName: Database Service Host 1
+    name: ORACLE_SERVICE_HOST
+    required: true
+  - description: Database service port 1
+    displayName: Database Service Port 1
+    name: ORACLE_SERVICE_PORT
+    required: true
+    value: "1521"
+  - description: Database service host 2
+    displayName: Database Service Host 2
+    name: ORACLE_SERVICE_HOST_2
+    required: true
+  - description: Database service port 2
+    displayName: Database Service Port 2
+    name: ORACLE_SERVICE_PORT_2
+    required: true
+    value: "1521"
+  - description: Database service name 
+    displayName: Database Service Name
+    name: ORACLE_SERVICE_NAME
+    required: true
+    value: "XXX_PRIMARY.WORLD"
+  - description: The name of the secret containing the keystore file
+    displayName: Server Keystore Secret Name
+    name: HTTPS_SECRET
+    value: sso-app-secret
+  - description: The name of the keystore file within the secret
+    displayName: Server Keystore Filename
+    name: HTTPS_KEYSTORE
+    value: keystore.jks
+  - description: The type of the keystore file (JKS or JCEKS)
+    displayName: Server Keystore Type
+    name: HTTPS_KEYSTORE_TYPE
+  - description: The name associated with the server certificate (e.g. jboss)
+    displayName: Server Certificate Name
+    name: HTTPS_NAME
+  - description: The password for the keystore and certificate (e.g. mykeystorepass)
+    displayName: Server Keystore Password
+    name: HTTPS_PASSWORD
+  - description: Sets xa-pool/min-pool-size for the configured datasource.
+    displayName: Datasource Minimum Pool Size
+    name: DB_MIN_POOL_SIZE
+  - description: Sets xa-pool/max-pool-size for the configured datasource.
+    displayName: Datasource Maximum Pool Size
+    name: DB_MAX_POOL_SIZE
+  - description: Sets transaction-isolation for the configured datasource.
+    displayName: Datasource Transaction Isolation
+    name: DB_TX_ISOLATION
+  - description: The name of the secret containing the keystore file
+    displayName: JGroups Secret Name
+    name: JGROUPS_ENCRYPT_SECRET
+    value: sso-app-secret
+  - description: The name of the keystore file within the secret
+    displayName: JGroups Keystore Filename
+    name: JGROUPS_ENCRYPT_KEYSTORE
+    value: jgroups.jceks
+  - description: The name associated with the server certificate (e.g. secret-key)
+    displayName: JGroups Certificate Name
+    name: JGROUPS_ENCRYPT_NAME
+  - description: The password for the keystore and certificate (e.g. password)
+    displayName: JGroups Keystore Password
+    name: JGROUPS_ENCRYPT_PASSWORD
+  - description: JGroups cluster password
+    displayName: JGroups Cluster Password
+    from: '[a-zA-Z0-9]{8}'
+    generate: expression
+    name: JGROUPS_CLUSTER_PASSWORD
+    required: true
+  - description: RH-SSO Server administrator username
+    displayName: RH-SSO Administrator Username
+    from: '[a-zA-Z0-9]{8}'
+    generate: expression
+    name: SSO_ADMIN_USERNAME
+    required: true
+  - description: RH-SSO Server administrator password
+    displayName: RH-SSO Administrator Password
+    from: '[a-zA-Z0-9]{8}'
+    generate: expression
+    name: SSO_ADMIN_PASSWORD
+    required: true
+  - description: Realm to be created in the RH-SSO server (e.g. demorealm).
+    displayName: RH-SSO Realm
+    name: SSO_REALM
+  - description: >-
+      The username used to access the RH-SSO service. This is used by clients to
+      create the appliction client(s) within the specified RH-SSO realm.
+    displayName: RH-SSO Service Username
+    name: SSO_SERVICE_USERNAME
+  - description: The password for the RH-SSO service user.
+    displayName: RH-SSO Service Password
+    name: SSO_SERVICE_PASSWORD
+  - description: The name of the truststore file within the secret (e.g. truststore.jks)
+    displayName: RH-SSO Trust Store
+    name: SSO_TRUSTSTORE
+  - description: The password for the truststore and certificate (e.g. mykeystorepass)
+    displayName: RH-SSO Trust Store Password
+    name: SSO_TRUSTSTORE_PASSWORD
+  - description: >-
+      The name of the secret containing the truststore file (e.g.
+      truststore-secret). Used for volume secretName
+    displayName: RH-SSO Trust Store Secret
+    name: SSO_TRUSTSTORE_SECRET
+    value: sso-app-secret
+  - description: Container memory limit.
+    displayName: Container Memory Limit
+    name: MEMORY_LIMIT
+    value: 1Gi
