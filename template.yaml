@@ -152,6 +152,10 @@ objects:
                   value: '${APPLICATION_NAME}-ping'
                 - name: OPENSHIFT_DNS_PING_SERVICE_PORT
                   value: '8888'
+                - name: OPENSHIFT_KUBE_PING_NAMESPACE
+                  value: '${OPENSHIFT_KUBE_PING_NAMESPACE}'
+                - name: OPENSHIFT_KUBE_PING_LABELS
+                  value: '${OPENSHIFT_KUBE_PING_LABELS}'
                 - name: HTTPS_KEYSTORE_DIR
                   value: /etc/eap-secret-volume
                 - name: HTTPS_KEYSTORE
@@ -451,3 +455,12 @@ parameters:
     displayName: Container Memory Limit
     name: MEMORY_LIMIT
     value: 1Gi
+  - description: >-
+      The SSO namespace to set up for clustering
+    displayName: SSO namespace to set up for clustering
+    name: SSO_NAMESPACE
+    value: ocp-sso
+  - description: SSO pods labels (eg application=sso).
+    displayName: SSO pods labels to set up for clustering
+    name: OPENSHIFT_KUBE_PING_LABELS
+    value: application=sso
