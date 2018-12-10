@@ -458,7 +458,7 @@ parameters:
   - description: >-
       The SSO namespace to set up for clustering
     displayName: SSO namespace to set up for clustering
-    name: SSO_NAMESPACE
+    name: OPENSHIFT_KUBE_PING_NAMESPACE
     value: ocp-sso
   - description: SSO pods labels (eg application=sso).
     displayName: SSO pods labels to set up for clustering
