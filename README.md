@@ -16,22 +16,27 @@ $ export ns=ocp-sso
 ```bash
 $ oc create -f template.yaml -n $ns
 ```
+
+```bash
+$ oc policy add-role-to-user view  -n $ns
+```
+
 ```bash
 $ oc process sso72-oracle \
+-p IMAGE=quay.io/xyz:latest \
 -p ORACLE_SERVICE_NAME=XXXXX  \
 -p ORACLE_USERNAME=XXXXX \
 -p ORACLE_PASSWORD=XXXXX \
--o ORACLE_DATABASE=XXXXX \
+-p ORACLE_DATABASE=XXXXX \
 -p ORACLE_SERVICE_HOST=service-db.ocp-sso.svc \
 -p ORACLE_SERVICE_HOST_2=service-db2.ocp-sso.svc  \
 -p HOSTNAME_HTTPS=sso.example.com \
 -p HOSTNAME_HTTP=nonsecure-sso.example.com \
 -p OPENSHIFT_KUBE_PING_NAMESPACE=$ns \
--p SSO_TRUSTSTORE_DIR=/etc/sso-secret-volume \
 -p SSO_TRUSTSTORE=truststore.jks \
 -p SSO_TRUSTSTORE_PASSWORD=XXXXX \
 -p SSO_ADMIN_PASSWORD=XXXXX \
--p SSO_ADMIN_USERNAME=XXXXX \ | oc create -f - -n $ns
+-p SSO_ADMIN_USERNAME=XXXXX | oc create -f - -n $ns
 ```
 
 # References

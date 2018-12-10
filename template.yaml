@@ -307,7 +307,7 @@ parameters:
     required: true
     value: sso
   - description: The image
-    displayName: The Image (e.g.: quay.io/abc/xyz:latest)
+    displayName: 'The Image (e.g.: quay.io/abc/xyz:latest)'
     name: IMAGE
     required: true
   - description: >-
