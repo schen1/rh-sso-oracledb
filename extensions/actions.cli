@@ -2,7 +2,7 @@
 embed-server --std-out=echo  --server-config=standalone-openshift.xml
 batch
 # Add Oracle driver
-module add --name=com.oracle --resources="/opt/eap/extensions/${env.ORACLE_DRIVER_FILE_NAME}"" --dependencies=javax.api,javax.resource.api
+module add --name=com.oracle --resources="/opt/eap/extensions/${env.ORACLE_DRIVER_FILE_NAME}" --dependencies=javax.api,javax.resource.api
 /subsystem=datasources/jdbc-driver=oracle:add(driver-name=oracle,driver-module-name=com.oracle,driver-xa-datasource-class-name=oracle.jdbc.xa.client.OracleXADataSource)
 # Remove default Datasource
 /subsystem=datasources/data-source=KeycloakDS:remove()
