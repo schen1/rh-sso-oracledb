@@ -123,10 +123,10 @@ objects:
                   value: '${DB_TX_ISOLATION}'
                 - name: JGROUPS_PING_PROTOCOL
                   value: openshift.KUBE_PING
-                - name: OPENSHIFT_KUBE_PING_NAMESPACE
-                  value: '${OPENSHIFT_KUBE_PING_NAMESPACE}'
-                - name: OPENSHIFT_KUBE_PING_LABELS
-                  value: '${OPENSHIFT_KUBE_PING_LABELS}'
+                - name: KUBERNETES_NAMESPACE
+                  value: '${KUBERNETES_NAMESPACE}'
+                - name: KUBERNETES_LABELS
+                  value: '${KUBERNETES_LABELS}'
                 - name: HTTPS_KEYSTORE_DIR
                   value: /etc/eap-secret-volume
                 - name: HTTPS_KEYSTORE
@@ -153,12 +153,12 @@ objects:
                   valueFrom:
                     secretKeyRef:
                       key: username
-                      name: sso-admin-secret
+                      name: ${APPLICATION_NAME}-admin-secret
                 - name: SSO_ADMIN_PASSWORD
                   valueFrom:
                     secretKeyRef:
                       key: password
-                      name: sso-admin-secret
+                      name: ${APPLICATION_NAME}-admin-secret
                 - name: SSO_REALM
                   value: '${SSO_REALM}'
                 - name: SSO_SERVICE_USERNAME
@@ -175,12 +175,12 @@ objects:
                   valueFrom:
                     secretKeyRef:
                       key: username
-                      name: sso-oracle-secret
+                      name: ${APPLICATION_NAME}-oracle-secret
                 - name: ORACLE_PASSWORD
                   valueFrom:
                     secretKeyRef:
                       key: password
-                      name: sso-oracle-secret
+                      name: ${APPLICATION_NAME}-oracle-secret
                 - name: ORACLE_DATABASE
                   value: '${ORACLE_DATABASE}'
                 - name: ORACLE_SERVICE_HOST
@@ -224,6 +224,7 @@ objects:
                     - /opt/eap/bin/readinessProbe.sh
               resources:
                 limits:
+                  cpu: '${CPU_LIMIT}'
                   memory: '${MEMORY_LIMIT}'
               volumeMounts:
                 - mountPath: /etc/eap-secret-volume
@@ -423,11 +424,15 @@ parameters:
     displayName: Container Memory Limit
     name: MEMORY_LIMIT
     value: 1Gi
+  - description: Container cpu limit.
+    displayName: Container cpu Limit
+    name: CPU_LIMIT
+    value: 1
   - description: >-
       The SSO namespace to set up for clustering
     displayName: SSO namespace to set up for clustering
-    name: OPENSHIFT_KUBE_PING_NAMESPACE
+    name: KUBERNETES_NAMESPACE
   - description: SSO pods labels (eg application=sso).
     displayName: SSO pods labels to set up for clustering
-    name: OPENSHIFT_KUBE_PING_LABELS
+    name: KUBERNETES_LABELS
     value: application=sso
