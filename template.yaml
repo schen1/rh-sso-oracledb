@@ -1,13 +1,12 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 labels:
-  template: sso72-oracle
-  xpaas: 1.4.15
+  template: sso74-oracle
 message: >-
   A new RH-SSO service (using Oracle DB) has been created in your
   project. The admin username/password for accessing the master realm via the
   RH-SSO console is ${SSO_ADMIN_USERNAME}/${SSO_ADMIN_PASSWORD}. The
-  username/password for accessing the Oracle database "${ORACLE_DATABASE}" is
+  username/password for accessing the Oracle database "${ORACLE_SERVICE_NAME}" is
   ${ORACLE_USERNAME}/${ORACLE_PASSWORD}. Please be sure to create the following secrets:
   "${HTTPS_SECRET}" containing the ${HTTPS_KEYSTORE} file used for serving
   secure content; "${JGROUPS_ENCRYPT_SECRET}" containing the
@@ -21,17 +20,15 @@ metadata:
       information about using this template, see
       https://github.com/schen1/rh-sso-oracledb.
     iconClass: icon-sso
-    openshift.io/display-name: Red Hat Single Sign-On 7.2 + Oracle DB (External)
+    openshift.io/display-name: Red Hat Single Sign-On 7.4 + Oracle DB (External)
     openshift.io/provider-display-name: 'Red Hat, Inc.'
     tags: 'sso,keycloak,jboss'
     template.openshift.io/documentation-url: 'https://access.redhat.com/documentation/en/red-hat-single-sign-on/'
     template.openshift.io/long-description: >-
       This template defines resources needed to develop Red Hat Single Sign-On
-      7.2 server based deployment, deployment configuration for Oracle DB, and securing RH-SSO communication using edge TLS.
+      7.4 server based deployment, deployment configuration for Oracle DB, and securing RH-SSO communication using edge TLS.
     template.openshift.io/support-url: 'https://access.redhat.com'
-    version: 1.4.15
-  name: sso72-oracle
-  namespace: ocp-sso
+  name: sso74-oracle
 objects:
   - apiVersion: v1
     kind: Service
@@ -111,13 +108,7 @@ objects:
           name: '${APPLICATION_NAME}'
         spec:
           containers:
-            - command:
-              - sh
-              - '-c'
-              - >-
-                /opt/eap/bin/jboss-cli.sh --file=/extensions/scripts/actions.cli
-                && /opt/eap/bin/openshift-launch.sh;
-              env:
+            - env:
                 - name: DB_SERVICE_PREFIX_MAPPING
                   value: ''
                 - name: DB_JNDI
@@ -132,10 +123,10 @@ objects:
                   value: '${DB_TX_ISOLATION}'
                 - name: JGROUPS_PING_PROTOCOL
                   value: openshift.KUBE_PING
-                - name: OPENSHIFT_KUBE_PING_NAMESPACE
-                  value: '${OPENSHIFT_KUBE_PING_NAMESPACE}'
-                - name: OPENSHIFT_KUBE_PING_LABELS
-                  value: '${OPENSHIFT_KUBE_PING_LABELS}'
+                - name: KUBERNETES_NAMESPACE
+                  value: '${KUBERNETES_NAMESPACE}'
+                - name: KUBERNETES_LABELS
+                  value: '${KUBERNETES_LABELS}'
                 - name: HTTPS_KEYSTORE_DIR
                   value: /etc/eap-secret-volume
                 - name: HTTPS_KEYSTORE
@@ -162,12 +153,12 @@ objects:
                   valueFrom:
                     secretKeyRef:
                       key: username
-                      name: sso-admin-secret
+                      name: ${APPLICATION_NAME}-admin-secret
                 - name: SSO_ADMIN_PASSWORD
                   valueFrom:
                     secretKeyRef:
                       key: password
-                      name: sso-admin-secret
+                      name: ${APPLICATION_NAME}-admin-secret
                 - name: SSO_REALM
                   value: '${SSO_REALM}'
                 - name: SSO_SERVICE_USERNAME
@@ -184,14 +175,12 @@ objects:
                   valueFrom:
                     secretKeyRef:
                       key: username
-                      name: sso-oracle-secret
+                      name: ${APPLICATION_NAME}-oracle-secret
                 - name: ORACLE_PASSWORD
                   valueFrom:
                     secretKeyRef:
                       key: password
-                      name: sso-oracle-secret
-                - name: ORACLE_DATABASE
-                  value: '${ORACLE_DATABASE}'
+                      name: ${APPLICATION_NAME}-oracle-secret
                 - name: ORACLE_SERVICE_HOST
                   value: '${ORACLE_SERVICE_HOST}'
                 - name: ORACLE_SERVICE_PORT
@@ -233,6 +222,7 @@ objects:
                     - /opt/eap/bin/readinessProbe.sh
               resources:
                 limits:
+                  cpu: '${CPU_LIMIT}'
                   memory: '${MEMORY_LIMIT}'
               volumeMounts:
                 - mountPath: /etc/eap-secret-volume
@@ -243,9 +233,6 @@ objects:
                   readOnly: true
                 - mountPath: /etc/sso-secret-volume
                   name: sso-truststore-volume
-                  readOnly: true
-                - mountPath: /extensions/scripts/
-                  name: sso-init-script-configmap
                   readOnly: true
           terminationGracePeriodSeconds: 75
           volumes:
@@ -258,10 +245,6 @@ objects:
             - name: sso-truststore-volume
               secret:
                 secretName: '${SSO_TRUSTSTORE_SECRET}'
-            - configMap:
-                defaultMode: 420
-                name: sso-init-script
-              name: sso-init-script-configmap
       triggers:
         - type: ConfigChange
   - apiVersion: v1
@@ -282,13 +265,6 @@ objects:
     stringData:
       password: '${ORACLE_PASSWORD}'
       username: '${ORACLE_USERNAME}'
-  - apiVersion: v1
-    data:
-      actions.cli: "#!/bin/bash\r\n\r\n## admin cli commands to edit the configuration\r\nembed-server --std-out=echo  --server-config=standalone-openshift.xml\r\nbatch\r\nmodule add --name=com.oracle --resources=/extensions/oracle-driver-ojdbc-12.1.0.2.jar --dependencies=javax.api,javax.resource.api\r\n/subsystem=datasources/jdbc-driver=oracle:add(driver-name=oracle,driver-module-name=com.oracle,driver-xa-datasource-class-name=oracle.jdbc.xa.client.OracleXADataSource)\r\n/subsystem=datasources/data-source=KeycloakDS:remove()\r\n/subsystem=datasources/data-source=KeycloakDS:add(jndi-name=java:jboss/datasources/KeycloakDS,enabled=true,use-java-context=true,connection-url=\"jdbc\\:oracle\\:thin\\:@(DESCRIPTION\\=(LOAD_BALANCE\\=on)(ADDRESS\\=(PROTOCOL\\=TCP)(HOST\\=${env.ORACLE_SERVICE_HOST})(PORT\\=${env.ORACLE_SERVICE_PORT}))(ADDRESS\\=(PROTOCOL\\=TCP)(HOST\\=${env.ORACLE_SERVICE_HOST_2})(PORT\\=${env.ORACLE_SERVICE_PORT_2}))(CONNECT_DATA\\=(SERVICE_NAME\\=${env.ORACLE_SERVICE_NAME})))\",driver-name=oracle,user-name=${env.ORACLE_USERNAME},password=${env.ORACLE_PASSWORD})\r\n/subsystem=keycloak-server/spi=truststore:add()\r\n/subsystem=keycloak-server/spi=truststore/provider=file:add(enabled=true)\r\n/subsystem=keycloak-server/spi=truststore/provider=file/:map-put(name=properties,key=file, value=\"${env.SSO_TRUSTSTORE_DIR}/${env.SSO_TRUSTSTORE}\")\r\n/subsystem=keycloak-server/spi=truststore/provider=file/:map-put(name=properties,key=password, value=\"${env.SSO_TRUSTSTORE_PASSWORD}\")\r\n/subsystem=keycloak-server/spi=truststore/provider=file/:map-put(name=properties,key=hostname-verification-policy, value=\"WILDCARD\")\r\n/subsystem=keycloak-server/spi=truststore/provider=file/:map-put(name=properties,key=disabled, value=\"false\")\r\nrun-batch\r\nquit\r\n"
-    kind: ConfigMap
-    metadata:
-      name: sso-init-script
-      namespace: ocp-sso
   - apiVersion: rbac.authorization.k8s.io/v1
     kind: RoleBinding
     metadata:
@@ -326,10 +302,6 @@ parameters:
     displayName: Database JNDI Name
     name: DB_JNDI
     value: 'java:jboss/datasources/KeycloakDS'
-  - description: Database name
-    displayName: Database Name
-    name: ORACLE_DATABASE
-    required: true
   - description: Database username
     displayName: Database Username
     name: ORACLE_USERNAME
@@ -364,7 +336,7 @@ parameters:
   - description: The name of the secret containing the keystore file
     displayName: Server Keystore Secret Name
     name: HTTPS_SECRET
-    value: sso-app-secret
+    value: sso-truststore
   - description: The name of the keystore file within the secret
     displayName: Server Keystore Filename
     name: HTTPS_KEYSTORE
@@ -390,7 +362,7 @@ parameters:
   - description: The name of the secret containing the keystore file
     displayName: JGroups Secret Name
     name: JGROUPS_ENCRYPT_SECRET
-    value: sso-app-secret
+    value: sso-truststore
   - description: The name of the keystore file within the secret
     displayName: JGroups Keystore Filename
     name: JGROUPS_ENCRYPT_KEYSTORE
@@ -441,17 +413,20 @@ parameters:
       truststore-secret). Used for volume secretName
     displayName: RH-SSO Trust Store Secret
     name: SSO_TRUSTSTORE_SECRET
-    value: sso-app-secret
+    value: sso-truststore
   - description: Container memory limit.
     displayName: Container Memory Limit
     name: MEMORY_LIMIT
-    value: 1Gi
+    value: 2Gi
+  - description: Container cpu limit.
+    displayName: Container cpu Limit
+    name: CPU_LIMIT
+    value: '1'
   - description: >-
       The SSO namespace to set up for clustering
     displayName: SSO namespace to set up for clustering
-    name: OPENSHIFT_KUBE_PING_NAMESPACE
-    value: ocp-sso
+    name: KUBERNETES_NAMESPACE
   - description: SSO pods labels (eg application=sso).
     displayName: SSO pods labels to set up for clustering
-    name: OPENSHIFT_KUBE_PING_LABELS
+    name: KUBERNETES_LABELS
     value: application=sso
