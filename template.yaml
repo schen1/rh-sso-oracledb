@@ -427,7 +427,7 @@ parameters:
   - description: Container cpu limit.
     displayName: Container cpu Limit
     name: CPU_LIMIT
-    value: 1
+    value: '1'
   - description: >-
       The SSO namespace to set up for clustering
     displayName: SSO namespace to set up for clustering
