@@ -1,8 +1,7 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 labels:
-  template: sso72-oracle
-  xpaas: 1.4.15
+  template: sso74-oracle
 message: >-
   A new RH-SSO service (using Oracle DB) has been created in your
   project. The admin username/password for accessing the master realm via the
@@ -27,10 +26,9 @@ metadata:
     template.openshift.io/documentation-url: 'https://access.redhat.com/documentation/en/red-hat-single-sign-on/'
     template.openshift.io/long-description: >-
       This template defines resources needed to develop Red Hat Single Sign-On
-      7.2 server based deployment, deployment configuration for Oracle DB, and securing RH-SSO communication using edge TLS.
+      7.4 server based deployment, deployment configuration for Oracle DB, and securing RH-SSO communication using edge TLS.
     template.openshift.io/support-url: 'https://access.redhat.com'
-    version: 1.4.15
-  name: sso72-oracle
+  name: sso74-oracle
   namespace: ocp-sso
 objects:
   - apiVersion: v1

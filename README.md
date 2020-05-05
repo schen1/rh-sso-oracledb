@@ -14,15 +14,15 @@ This repository contains the template to deploy RH SSO for accessing external Or
 $ export ns=ocp-sso
 ```
 ```bash
-$ oc create -f template.yaml -n $ns
+$ oc create -f template.yaml -n ${ns}
 ```
 
 ```bash
-$ oc policy add-role-to-user view  -n $ns
+$ oc policy add-role-to-user view system:serviceaccount:${ns}:default -n ${ns}
 ```
 
 ```bash
-$ oc process sso72-oracle \
+$ oc process sso74-oracle \
 -p IMAGE=quay.io/xyz:latest \
 -p ORACLE_SERVICE_NAME=XXXXX  \
 -p ORACLE_USERNAME=XXXXX \
@@ -32,16 +32,17 @@ $ oc process sso72-oracle \
 -p ORACLE_SERVICE_HOST_2=service-db2.ocp-sso.svc  \
 -p HOSTNAME_HTTPS=sso.example.com \
 -p HOSTNAME_HTTP=nonsecure-sso.example.com \
--p OPENSHIFT_KUBE_PING_NAMESPACE=$ns \
+-p OPENSHIFT_KUBE_PING_NAMESPACE=${ns} \
 -p SSO_TRUSTSTORE=truststore.jks \
 -p SSO_TRUSTSTORE_PASSWORD=XXXXX \
 -p SSO_ADMIN_PASSWORD=XXXXX \
--p SSO_ADMIN_USERNAME=XXXXX | oc create -f - -n $ns
+-p SSO_ADMIN_USERNAME=XXXXX | oc create -f - -n ${ns}
 ```
 
 # References
-https://access.redhat.com/solutions/3402171
+[External Database Access for Extended Openshift template on RH-SSO ](https://access.redhat.com/solutions/3402171)
 
-https://github.com/jboss-container-images/redhat-sso-7-openshift-image/tree/sso72-dev/templates
+[Red Hat Single Sign-On Continuous Delivery 7.4 OpenShift container image](https://github.com/jboss-container-images/redhat-sso-7-openshift-image)
 
-https://access.redhat.com/documentation/en-us/red_hat_jboss_enterprise_application_platform/7.1/html-single/red_hat_jboss_enterprise_application_platform_for_openshift_online/#reference_clustering
+[Service Discovery](https://access.redhat.com/documentation/en-us/red_hat_jboss_enterprise_application_platform/7.3/html/getting_started_with_jboss_eap_for_openshift_container_platform/reference_information#configuring_a_jgroups_discovery_mechanism)
+
