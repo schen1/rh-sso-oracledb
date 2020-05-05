@@ -6,7 +6,7 @@ message: >-
   A new RH-SSO service (using Oracle DB) has been created in your
   project. The admin username/password for accessing the master realm via the
   RH-SSO console is ${SSO_ADMIN_USERNAME}/${SSO_ADMIN_PASSWORD}. The
-  username/password for accessing the Oracle database "${ORACLE_DATABASE}" is
+  username/password for accessing the Oracle database "${ORACLE_SERVICE_NAME}" is
   ${ORACLE_USERNAME}/${ORACLE_PASSWORD}. Please be sure to create the following secrets:
   "${HTTPS_SECRET}" containing the ${HTTPS_KEYSTORE} file used for serving
   secure content; "${JGROUPS_ENCRYPT_SECRET}" containing the
@@ -20,7 +20,7 @@ metadata:
       information about using this template, see
       https://github.com/schen1/rh-sso-oracledb.
     iconClass: icon-sso
-    openshift.io/display-name: Red Hat Single Sign-On 7.2 + Oracle DB (External)
+    openshift.io/display-name: Red Hat Single Sign-On 7.4 + Oracle DB (External)
     openshift.io/provider-display-name: 'Red Hat, Inc.'
     tags: 'sso,keycloak,jboss'
     template.openshift.io/documentation-url: 'https://access.redhat.com/documentation/en/red-hat-single-sign-on/'
@@ -181,8 +181,6 @@ objects:
                     secretKeyRef:
                       key: password
                       name: ${APPLICATION_NAME}-oracle-secret
-                - name: ORACLE_DATABASE
-                  value: '${ORACLE_DATABASE}'
                 - name: ORACLE_SERVICE_HOST
                   value: '${ORACLE_SERVICE_HOST}'
                 - name: ORACLE_SERVICE_PORT
@@ -304,10 +302,6 @@ parameters:
     displayName: Database JNDI Name
     name: DB_JNDI
     value: 'java:jboss/datasources/KeycloakDS'
-  - description: Database name
-    displayName: Database Name
-    name: ORACLE_DATABASE
-    required: true
   - description: Database username
     displayName: Database Username
     name: ORACLE_USERNAME
@@ -423,7 +417,7 @@ parameters:
   - description: Container memory limit.
     displayName: Container Memory Limit
     name: MEMORY_LIMIT
-    value: 1Gi
+    value: 2Gi
   - description: Container cpu limit.
     displayName: Container cpu Limit
     name: CPU_LIMIT
