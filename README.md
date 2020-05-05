@@ -26,13 +26,16 @@ $ oc create secret sso-truststore --from-file=truststore.jks -n ${ns}
 
 ```bash
 $ oc process sso74-oracle \
+-p APPLICATION_NAME=sso \
 -p IMAGE=quay.io/xyz:latest \
 -p ORACLE_SERVICE_NAME=XXXXX  \
 -p ORACLE_USERNAME=XXXXX \
 -p ORACLE_PASSWORD=XXXXX \
 -p ORACLE_DATABASE=XXXXX \
 -p ORACLE_SERVICE_HOST=service-db.ocp-sso.svc \
+-p ORACLE_SERVICE_PORT=1901 \
 -p ORACLE_SERVICE_HOST_2=service-db2.ocp-sso.svc  \
+-p ORACLE_SERVICE_PORT_2=1901 \
 -p HOSTNAME_HTTPS=sso.example.com \
 -p HOSTNAME_HTTP=nonsecure-sso.example.com \
 -p OPENSHIFT_KUBE_PING_NAMESPACE=${ns} \
@@ -44,6 +47,8 @@ $ oc process sso74-oracle \
 
 ## References
 [External Database Access for Extended Openshift template on RH-SSO ](https://access.redhat.com/solutions/3402171)
+
+[Running JBoss CLI commands on extended JBoss EAP 7 OpenShift Image ](https://access.redhat.com/solutions/3911211)
 
 [Red Hat Single Sign-On Continuous Delivery 7.4 OpenShift container image](https://github.com/jboss-container-images/redhat-sso-7-openshift-image)
 
