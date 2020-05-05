@@ -282,7 +282,30 @@ objects:
       username: '${ORACLE_USERNAME}'
   - apiVersion: v1
     data:
-      actions.cli: "#!/bin/bash\r\n\r\n## admin cli commands to edit the configuration\r\nembed-server --std-out=echo  --server-config=standalone-openshift.xml\r\nbatch\r\nmodule add --name=com.oracle --resources=/extensions/oracle-driver-ojdbc-12.1.0.2.jar --dependencies=javax.api,javax.resource.api\r\n/subsystem=datasources/jdbc-driver=oracle:add(driver-name=oracle,driver-module-name=com.oracle,driver-xa-datasource-class-name=oracle.jdbc.xa.client.OracleXADataSource)\r\n/subsystem=datasources/data-source=KeycloakDS:remove()\r\n/subsystem=datasources/data-source=KeycloakDS:add(jndi-name=java:jboss/datasources/KeycloakDS,enabled=true,use-java-context=true,connection-url=\"jdbc\\:oracle\\:thin\\:@(DESCRIPTION\\=(LOAD_BALANCE\\=on)(ADDRESS\\=(PROTOCOL\\=TCP)(HOST\\=${env.ORACLE_SERVICE_HOST})(PORT\\=${env.ORACLE_SERVICE_PORT}))(ADDRESS\\=(PROTOCOL\\=TCP)(HOST\\=${env.ORACLE_SERVICE_HOST_2})(PORT\\=${env.ORACLE_SERVICE_PORT_2}))(CONNECT_DATA\\=(SERVICE_NAME\\=${env.ORACLE_SERVICE_NAME})))\",driver-name=oracle,user-name=${env.ORACLE_USERNAME},password=${env.ORACLE_PASSWORD})\r\n/subsystem=keycloak-server/spi=truststore:add()\r\n/subsystem=keycloak-server/spi=truststore/provider=file:add(enabled=true)\r\n/subsystem=keycloak-server/spi=truststore/provider=file/:map-put(name=properties,key=file, value=\"${env.SSO_TRUSTSTORE_DIR}/${env.SSO_TRUSTSTORE}\")\r\n/subsystem=keycloak-server/spi=truststore/provider=file/:map-put(name=properties,key=password, value=\"${env.SSO_TRUSTSTORE_PASSWORD}\")\r\n/subsystem=keycloak-server/spi=truststore/provider=file/:map-put(name=properties,key=hostname-verification-policy, value=\"WILDCARD\")\r\n/subsystem=keycloak-server/spi=truststore/provider=file/:map-put(name=properties,key=disabled, value=\"false\")\r\nrun-batch\r\nquit\r\n"
+      actions.cli: |
+        #!/bin/bash
+
+        ## admin cli commands to edit the configuration
+
+        embed-server --std-out=echo  --server-config=standalone-openshift.xml
+
+        batch
+
+        module add --name=com.oracle --resources=/extensions/oracle-driver-ojdbc-12.1.0.2.jar --dependencies=javax.api,javax.resource.api
+        /subsystem=datasources/jdbc-driver=oracle:add(driver-name=oracle,driver-module-name=com.oracle,driver-xa-datasource-class-name=oracle.jdbc.xa.client.OracleXADataSource)
+        /subsystem=datasources/data-source=KeycloakDS:remove()
+        /subsystem=datasources/data-source=KeycloakDS:add(jndi-name=java:jboss/datasources/KeycloakDS,enabled=true,use-java-context=true,connection-url="jdbc\:oracle\:thin\:@(DESCRIPTION\=(LOAD_BALANCE\=on)(ADDRESS\=(PROTOCOL\=TCP)(HOST\=${env.ORACLE_SERVICE_HOST})(PORT\=${env.ORACLE_SERVICE_PORT}))(ADDRESS\=(PROTOCOL\=TCP)(HOST\=${env.ORACLE_SERVICE_HOST_2})(PORT\=${env.ORACLE_SERVICE_PORT_2}))(CONNECT_DATA\=(SERVICE_NAME\=${env.ORACLE_SERVICE_NAME})))",driver-name=oracle,user-name=${env.ORACLE_USERNAME},password=${env.ORACLE_PASSWORD})
+        /subsystem=keycloak-server/spi=truststore:add()
+        /subsystem=keycloak-server/spi=truststore/provider=file:add(enabled=true)
+        /subsystem=keycloak-server/spi=truststore/provider=file/:map-put(name=properties,key=file, value="${env.SSO_TRUSTSTORE_DIR}/${env.SSO_TRUSTSTORE}")
+        /subsystem=keycloak-server/spi=truststore/provider=file/:map-put(name=properties,key=password, value="${env.SSO_TRUSTSTORE_PASSWORD}")
+        /subsystem=keycloak-server/spi=truststore/provider=file/:map-put(name=properties,key=hostname-verification-policy, value="WILDCARD")
+        /subsystem=keycloak-server/spi=truststore/provider=file/:map-put(name=properties,key=disabled, value="false")
+
+        run-batch
+
+        quit
+
     kind: ConfigMap
     metadata:
       name: sso-init-script
@@ -362,7 +385,7 @@ parameters:
   - description: The name of the secret containing the keystore file
     displayName: Server Keystore Secret Name
     name: HTTPS_SECRET
-    value: sso-app-secret
+    value: sso-truststore
   - description: The name of the keystore file within the secret
     displayName: Server Keystore Filename
     name: HTTPS_KEYSTORE
@@ -388,7 +411,7 @@ parameters:
   - description: The name of the secret containing the keystore file
     displayName: JGroups Secret Name
     name: JGROUPS_ENCRYPT_SECRET
-    value: sso-app-secret
+    value: sso-truststore
   - description: The name of the keystore file within the secret
     displayName: JGroups Keystore Filename
     name: JGROUPS_ENCRYPT_KEYSTORE
@@ -439,7 +462,7 @@ parameters:
       truststore-secret). Used for volume secretName
     displayName: RH-SSO Trust Store Secret
     name: SSO_TRUSTSTORE_SECRET
-    value: sso-app-secret
+    value: sso-truststore
   - description: Container memory limit.
     displayName: Container Memory Limit
     name: MEMORY_LIMIT
